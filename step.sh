@@ -1,22 +1,31 @@
-#!/bin/bash
-set -ex
+#!/usr/bin/env bash
+# fail if any commands fails
+set -e
+# debug log
+set -x
 
-echo "This is the value specified for the input 'example_step_input': ${example_step_input}"
+if hash jq 2>/dev/null; then
+  echo "jq already installed."
+else
+  echo "jq is not installed. Installing..."
+  /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  brew install jq
+fi
 
-#
-# --- Export Environment Variables for other Steps:
-# You can export Environment Variables for other Steps with
-#  envman, which is automatically installed by `bitrise setup`.
-# A very simple example:
-envman add --key EXAMPLE_STEP_OUTPUT --value 'the value you want to share'
-# Envman can handle piped inputs, which is useful if the text you want to
-# share is complex and you don't want to deal with proper bash escaping:
-#  cat file_with_complex_input | envman add --KEY EXAMPLE_STEP_OUTPUT
-# You can find more usage examples on envman's GitHub page
-#  at: https://github.com/bitrise-io/envman
-
-#
-# --- Exit codes:
-# The exit code of your Step is very important. If you return
-#  with a 0 exit code `bitrise` will register your Step as "successful".
-# Any non zero exit code will be registered as "failed" by `bitrise`.
+# 現在のビルドのPR番号を取得します
+CURRENT_PR_NUMBER=$(curl -H "Authorization: ${bitrise_access_token}" https://api.bitrise.io/v0.1/apps/$bitrise_app_slug/builds/$bitrise_build_slug | jq -r '.data.pull_request_id')
+# 同じアプリのすべての実行中のビルドを取得します
+RUNNING_BUILDS=$(curl -H "Authorization: ${bitrise_access_token}" https://api.bitrise.io/v0.1/apps/$bitrise_app_slug/builds?status=0&workflow=$workflow)
+# 現在のビルドと同じPRを自分以外すべてのビルドをキャンセルします
+for BUILD_SLUG in $(echo $RUNNING_BUILDS | jq -r '.data[] | select(.slug != "'$bitrise_build_slug'" and .pull_request_id == '$CURRENT_PR_NUMBER') | .slug'); do
+    curl -X 'POST' \
+      https://api.bitrise.io/v0.1/apps/$bitrise_app_slug/builds/$BUILD_SLUG/abort \
+      -H "Authorization: ${bitrise_access_token}" \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -d '{
+           "abort_reason": "新しいPRを出したため",
+           "abort_with_success": true,
+           "skip_notifications": true
+          }'
+done

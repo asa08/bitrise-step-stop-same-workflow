@@ -67,24 +67,20 @@ toolkit:
 
 
 inputs:
-  - example_step_input: Default Value - you can leave this empty if you want to
+  - bitrise_access_token:
     opts:
-      title: "Example Step Input"
-      summary: Summary. No more than 2-3 sentences.
-      description: |
-        Description of this input.
-
-        Can be Markdown formatted text.
+      title: Bitrise Access Token
       is_expand: true
       is_required: true
-      value_options: []
+      is_sensitive: true
+  - bitrise_app_slug: ＄BITRISE_APP_SLUG
+    opts:
+      is_expand: true
+  - bitrise_build_slug: ＄BITRISE_BUILD_SLUG
+    opts:
+      is_expand: true
+  - workflow:
+      title: Workflow
+      summary: Target workflow.
 
 outputs:
-  - EXAMPLE_STEP_OUTPUT:
-    opts:
-      title: "Example Step Output"
-      summary: Summary. No more than 2-3 sentences.
-      description: |
-        Description of this output.
-
-        Can be Markdown formatted text.
